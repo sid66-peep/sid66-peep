@@ -1,0 +1,6 @@
+._*
+.DS_Store
+__pycache__/
+data/contributions.tmp
+.claude/
+preview.html
