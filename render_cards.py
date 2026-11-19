@@ -46,7 +46,13 @@ PROFILE = {
     "line": "Building data platforms on Azure and Databricks that process 2M+ records a day.",
     "status": "Open to AI data engineering roles",
     "meta": ["Kochi, India", "Azure · Databricks", "5+ years"],
-    "portrait": "assets/portrait.jpg",  # set to None (or delete the file) to drop it
+    # Right-hand visual: a medallion lakehouse flow. Set to None for a text-only hero.
+    "pipeline": {
+        "caption": "Lakehouse · Delta Lake",
+        "stages": [("Bronze", "raw", "#d29a6a"), ("Silver", "cleaned", "#c9d0da"), ("Gold", "models", "#c4b5fd")],
+        "sources": "ADLS · Event Hubs · SAP",
+        "outputs": "Power BI · Snowflake",
+    },
 }
 
 TILES = [
@@ -85,7 +91,6 @@ C = {
     "violet_l": "#c4b5fd",
     "blue": "#3b82f6",
     "green": "#22c55e",
-    "avatar_bg": "#0f1424",  # .id-card__avatar background
 }
 GRAD = [("0", "#7c3aed"), ("45%", "#5b6cf0"), ("75%", "#4f8ff7"), ("100%", "#7aa8f8")]
 HEAT = ["#1a1a1e", "#2e1f5e", "#4c2a9e", "#7c3aed", "#a78bfa"]  # brand violet ramp
@@ -382,9 +387,8 @@ def icon(name, x, y, size=24, stroke=C["violet_l"], width=1.7):
 
 # ------------------------------------------------------------------ cards ---
 def hero():
-    portrait = ROOT / PROFILE["portrait"] if PROFILE.get("portrait") else None
-    has_photo = bool(portrait and portrait.exists())
-    c = Card("hero", W, 250, f"{PROFILE['name']}, {PROFILE['role']}")
+    show_pipeline = bool(PROFILE.get("pipeline"))
+    c = Card("hero", W, 262, f"{PROFILE['name']}, {PROFILE['role']}")
     c.frame(glow=True)
     x = 44
     # status pill with a pulsing dot (SMIL) and a static twin for reduced motion
@@ -405,40 +409,65 @@ def hero():
     c.text(x, 114, PROFILE["name"], "semi", 50, cls="a-up", delay=0.3, tracking=-0.03)
     c.gradient("role")
     c.text(x, 150, PROFILE["role"], "semi", 22, fill="url(#role)", cls="a-up", delay=0.45, tracking=-0.01)
-    text_max = (W - 260 if has_photo else W - 88)
-    line = wrap(PROFILE["line"], "sans", 15, text_max, 1)[0]
-    c.text(x, 182, line, "sans", 15, C["text2"], cls="a-up", delay=0.6)
+    text_max = PIPE_X0 - x - 40 if show_pipeline else W - 2 * x
+    for j, ln in enumerate(wrap(PROFILE["line"], "sans", 15, text_max, 2)):
+        c.text(x, 184 + j * 21, ln, "sans", 15, C["text2"], cls="a-up", delay=0.6 + j * 0.06)
     meta = "   ·   ".join(PROFILE["meta"])
-    c.text(x, 218, meta, "mono", 11.5, C["text3"], cls="a-up", delay=0.75, tracking=0.06, upper=True)
-
-    if has_photo:
-        cx, cy, r = W - 128, 125, 78
-        mime = "image/png" if portrait.suffix.lower() == ".png" else "image/jpeg"
-        data = base64.b64encode(portrait.read_bytes()).decode()
-        c.defs.append(f'<clipPath id="pc"><circle cx="{cx}" cy="{cy}" r="{r}"/></clipPath>')
-        c.gradient("ring", "1", "1")
-        circ = 2 * 3.14159 * (r + 7)
-        # soft violet glow under the avatar, as on the site (box-shadow 0 10px 30px -10px #7c3aed99)
-        c.defs.append('<filter id="halo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="13"/></filter>')
-        c.add(f'<g class="a-fade" style="animation-delay:{c.d(0.6)}">'
-              f'<circle cx="{cx}" cy="{cy + 12}" r="{r - 6}" fill="{C["violet"]}" fill-opacity=".6" filter="url(#halo)"/></g>')
-        c.add(f'<g class="a-pop" style="animation-delay:{c.d(0.35)}">')
-        c.add(f'<circle cx="{cx}" cy="{cy}" r="{r + 7}" fill="{C["avatar_bg"]}"/>')
-        c.add(
-            f'<image href="data:{mime};base64,{data}" x="{cx - r}" y="{cy - r}" width="{2 * r}" height="{2 * r}" '
-            f'clip-path="url(#pc)" preserveAspectRatio="xMidYMid slice"/>'
-        )
-        c.add("</g>")
-        # ring that draws itself (SMIL); the static twin is the finished ring
-        ring = f'cx="{cx}" cy="{cy}" r="{r + 7}" fill="none" stroke="url(#ring)" stroke-width="2.5" transform="rotate(-90 {cx} {cy})"'
-        c.add(f'<circle class="s" {ring}/>')
-        c.add(
-            f'<circle class="m" {ring} stroke-dasharray="{circ:.1f}" stroke-dashoffset="{0 if STATIC else circ:.1f}">'
-            + smil(f'<animate attributeName="stroke-dashoffset" from="{circ:.1f}" to="0" dur="1.4s" begin="{c.d(0.5)}" '
-                   f'fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".22 1 .36 1"/>')
-            + "</circle>"
-        )
+    c.text(x, 238, meta, "mono", 11.5, C["text3"], cls="a-up", delay=0.8, tracking=0.06, upper=True)
+    if show_pipeline:
+        pipeline(c, PROFILE["pipeline"])
     c.save()
+
+
+# Medallion colours from the site's .dark-art tokens (bronze, silver, gold).
+PIPE_X0, PIPE_X1 = 500, 808
+
+
+def pipeline(c: Card, spec: dict):
+    """Bronze -> Silver -> Gold lakehouse flow with data dots travelling the links."""
+    stages = spec["stages"]
+    n = len(stages)
+    gap = 30
+    bw = (PIPE_X1 - PIPE_X0 - gap * (n - 1)) / n
+    by, bh = 104, 64
+    mid = by + bh / 2
+    c.text((PIPE_X0 + PIPE_X1) / 2, 84, spec["caption"], "mono", 9.5, C["text3"], anchor="middle",
+           cls="a-fade", delay=0.3, tracking=0.12, upper=True)
+    for i, (name, sub, col) in enumerate(stages):
+        bx = PIPE_X0 + i * (bw + gap)
+        d = 0.4 + i * 0.16
+        c.add(f'<g class="a-pop" style="animation-delay:{c.d(d)}">')
+        c.add(f'<rect x="{bx:.1f}" y="{by}" width="{bw:.1f}" height="{bh}" rx="12" fill="{C["surface2"]}" stroke="{col}" stroke-opacity=".45"/>')
+        c.add(f'<rect x="{bx + 14:.1f}" y="{by + 14}" width="18" height="3" rx="1.5" fill="{col}"/>')
+        c.text(bx + 14, by + 36, name, "mono", 10.5, col, tracking=0.1, upper=True)
+        c.text(bx + 14, by + 53, sub, "sans", 12, C["text2"])
+        c.add("</g>")
+        if i == n - 1:
+            continue
+        # link with arrowhead, then a dot that keeps flowing along it
+        x1, x2 = bx + bw + 4, bx + bw + gap - 4
+        c.add(f'<g class="a-sweep" style="animation-delay:{c.d(d + 0.2)}">'
+              f'<path d="M{x1:.1f} {mid}H{x2 - 1:.1f}M{x2 - 5:.1f} {mid - 4}l4.5 4-4.5 4" fill="none" '
+              f'stroke="{C["border2"]}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>')
+        dot = f'cy="{mid - 9}" r="2.6" fill="{C["violet_l"]}"'
+        c.add(f'<circle class="s" cx="{(x1 + x2) / 2:.1f}" {dot}/>')
+        c.add(f'<circle class="m" cx="{x1:.1f}" {dot} opacity="0">'
+              + smil(f'<animate attributeName="cx" values="{x1:.1f};{x2:.1f}" dur="1.6s" begin="{c.d(1.3 + i * 0.8)}" repeatCount="indefinite"/>'
+                     f'<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.2;.8;1" dur="1.6s" begin="{c.d(1.3 + i * 0.8)}" repeatCount="indefinite"/>')
+              + "</circle>")
+    # what flows in (under the first stage) and what comes out (under the last)
+    first_cx = PIPE_X0 + bw / 2
+    last_cx = PIPE_X1 - bw / 2
+    for cx, label, up, anchor, tx, d in (
+        (first_cx, spec["sources"], True, "start", PIPE_X0, 0.9),
+        (last_cx, spec["outputs"], False, "end", PIPE_X1, 1.0),
+    ):
+        y0, y1 = by + bh + 6, by + bh + 22
+        head = (f"M{cx - 4} {y0 + 5}l4-4.5 4 4.5" if up else f"M{cx - 4} {y1 - 5}l4 4.5 4-4.5")
+        c.add(f'<g class="a-fade" style="animation-delay:{c.d(d)}">'
+              f'<path d="M{cx} {y0}V{y1}{head}" fill="none" stroke="{C["border2"]}" stroke-width="1.5" '
+              f'stroke-linecap="round" stroke-linejoin="round"/></g>')
+        c.text(tx, y1 + 16, label, "mono", 9.5, C["text3"], anchor=anchor, cls="a-fade", delay=d, tracking=0.08, upper=True)
 
 
 def tile(t):

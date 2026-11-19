@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [render_cards.py, data/query.graphql, assets/**, fonts/**, .github/workflows/cards.yml]
+    paths: [render_cards.py, data/query.graphql, fonts/**, .github/workflows/cards.yml]
 
 permissions:
   contents: write
