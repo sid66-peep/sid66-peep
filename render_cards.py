@@ -85,6 +85,7 @@ C = {
     "violet_l": "#c4b5fd",
     "blue": "#3b82f6",
     "green": "#22c55e",
+    "avatar_bg": "#0f1424",  # .id-card__avatar background
 }
 GRAD = [("0", "#7c3aed"), ("45%", "#5b6cf0"), ("75%", "#4f8ff7"), ("100%", "#7aa8f8")]
 HEAT = ["#1a1a1e", "#2e1f5e", "#4c2a9e", "#7c3aed", "#a78bfa"]  # brand violet ramp
@@ -417,8 +418,12 @@ def hero():
         c.defs.append(f'<clipPath id="pc"><circle cx="{cx}" cy="{cy}" r="{r}"/></clipPath>')
         c.gradient("ring", "1", "1")
         circ = 2 * 3.14159 * (r + 7)
+        # soft violet glow under the avatar, as on the site (box-shadow 0 10px 30px -10px #7c3aed99)
+        c.defs.append('<filter id="halo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="13"/></filter>')
+        c.add(f'<g class="a-fade" style="animation-delay:{c.d(0.6)}">'
+              f'<circle cx="{cx}" cy="{cy + 12}" r="{r - 6}" fill="{C["violet"]}" fill-opacity=".6" filter="url(#halo)"/></g>')
         c.add(f'<g class="a-pop" style="animation-delay:{c.d(0.35)}">')
-        c.add(f'<circle cx="{cx}" cy="{cy}" r="{r + 7}" fill="{C["surface2"]}"/>')
+        c.add(f'<circle cx="{cx}" cy="{cy}" r="{r + 7}" fill="{C["avatar_bg"]}"/>')
         c.add(
             f'<image href="data:{mime};base64,{data}" x="{cx - r}" y="{cy - r}" width="{2 * r}" height="{2 * r}" '
             f'clip-path="url(#pc)" preserveAspectRatio="xMidYMid slice"/>'
